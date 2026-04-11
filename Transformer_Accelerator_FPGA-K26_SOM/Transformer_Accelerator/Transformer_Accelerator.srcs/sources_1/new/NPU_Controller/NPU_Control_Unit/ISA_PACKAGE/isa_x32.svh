@@ -13,8 +13,8 @@ package isa_x32;
   Opcode table
   ─────────────────────────────────────────────*/
   typedef enum logic [4:0] {
-    OP_VDOTM  = 4'h0,
-    OP_MDOTM  = 4'h1,
+    OP_GEMV   = 4'h0,
+    OP_GEMM   = 4'h1,
     OP_MEMCPY = 4'h2
   } opcode_t;
 

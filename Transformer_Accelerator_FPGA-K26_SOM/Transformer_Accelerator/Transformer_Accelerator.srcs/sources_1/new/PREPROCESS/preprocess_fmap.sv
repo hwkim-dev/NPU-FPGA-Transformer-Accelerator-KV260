@@ -1,10 +1,10 @@
 `include "GLOBAL_CONST.svh"
 `timescale 1ns / 1ps
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 `include "npu_interfaces.svh"
 
 /**
- * Module: stlc_fmap_preprocessor
+ * Module: gemm_fmap_preprocessor
  *
  * Role:
  * - Combined 256-bit FMap streaming from HPC0/HPC1.
@@ -32,7 +32,7 @@ module preprocess_fmap #(
     output logic [`FIXED_MANT_WIDTH-1:0] o_fmap_broadcast[0:`ARRAY_SIZE_H-1][0:PIPELINE_CNT-1],
     output logic                         o_fmap_valid    [ 0:PIPELINE_CNT-1],
 
-    output logic                       o_VDOTM_emax [ 0:PIPELINE_CNT-1],
+    output logic                       o_GEMV_emax  [ 0:PIPELINE_CNT-1],
     output logic [`BF16_EXP_WIDTH-1:0] o_cached_emax[0:`ARRAY_SIZE_H-1]
 );
 

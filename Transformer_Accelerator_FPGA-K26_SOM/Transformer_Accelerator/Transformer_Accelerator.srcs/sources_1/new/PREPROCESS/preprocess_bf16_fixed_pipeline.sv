@@ -1,9 +1,9 @@
 `include "GLOBAL_CONST.svh"
 `timescale 1ns / 1ps
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 
 /**
- * Module: stlc_bf16_fixed_pipeline
+ * Module: gemm_bf16_fixed_pipeline
  * Description:
  *   High-Throughput 16-Lane Pipelined BF16 to Fixed-point Converter.
  *   - Input: 256-bit (16 x BF16 elements) per clock.
