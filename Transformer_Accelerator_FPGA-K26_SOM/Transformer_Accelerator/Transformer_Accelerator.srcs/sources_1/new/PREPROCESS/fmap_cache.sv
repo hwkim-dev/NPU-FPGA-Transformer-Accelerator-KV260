@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 `include "GLOBAL_CONST.svh"
 
 /**
- * Module: stlc_fmap_cache
+ * Module: gemm_fmap_cache
  * Description:
  *   SRAM-based Feature Map Cache for Gemma 3N Decode Phase (GEMV).
  *   - Stores a 1x2048 Feature Map (BF16, converted to 27-bit Mantissas).

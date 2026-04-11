@@ -49,50 +49,22 @@ package isa_x64;
 
   //  Opcode table (4-bit)
   typedef enum logic [3:0] {
-    OP_VDOTM  = 4'h0,
-    OP_MDOTM  = 4'h1,
+    OP_GEMV   = 4'h0,
+    OP_GEMM   = 4'h1,
     OP_MEMCPY = 4'h2,
     OP_MEMSET = 4'h3
   } opcode_e;
 
 
-
-  /*
-//  Field layouts per opcode (60-bit payloads)
-// V dot M / M dot M payload (Total 60 bits)
-// reserved(3) + parallel_lane(5) + shape(6) + size(6) + flags(6) + src(17) + dest(17) = 60 bits
-typedef struct packed {
-  logic [2:0]     reserved;
-  parallel_lane_t parallel_lane;
-  ptr_addr_t      shape_ptr_addr;
-  ptr_addr_t      size_ptr_addr;
-  flags_t         flags;
-  src_addr_t      src_addr;
-  dest_addr_t     dest_addr;
-} payload_dotm_t;
-
-// Memcpy / Memset payload (Total 60 bits)
-// reserved(2) + shape(6) + C(17) + B(17) + A(17) + to_device(1) = 60 bits
-typedef struct packed {
-  logic [1:0] reserved;
-  ptr_addr_t  shape_ptr_addr;
-  src_addr_t  c_addr;
-  src_addr_t  b_addr;
-  dest_addr_t a_addr;
-  logic       to_device;       // From device To device
-} payload_memcpy_t;
-
-//  Full 64-bit instruction word
-//  Payload (60b) + Fixed header (opcode 4b) = 64 bits
-
-typedef struct packed {
-  union packed {
-    payload_dotm_t   dotm;
-    payload_memory_t memory;
-  } payload;  // [63:4]
-  opcode_e opcode;  // [3:0]
-} instruction_x64_t;
-*/
+  typedef struct packed {
+    dest_addr_t     dest_reg;
+    src_addr_t      src_addr;
+    flags_t         flags;
+    ptr_addr_t      size_ptr_addr;
+    ptr_addr_t      shape_ptr_addr;
+    parallel_lane_t parallel_lane;
+    reserved_dot    reserved;
+  } GEMV_op_x64_t;
 
   typedef struct packed {
     dest_addr_t     dest_reg;
@@ -102,17 +74,7 @@ typedef struct packed {
     ptr_addr_t      shape_ptr_addr;
     parallel_lane_t parallel_lane;
     reserved_dot    reserved;
-  } vdotm_op_x64_t;
-
-  typedef struct packed {
-    dest_addr_t     dest_reg;
-    src_addr_t      src_addr;
-    flags_t         flags;
-    ptr_addr_t      size_ptr_addr;
-    ptr_addr_t      shape_ptr_addr;
-    parallel_lane_t parallel_lane;
-    reserved_dot    reserved;
-  } mdotm_op_x64_t;
+  } GEMM_op_x64_t;
 
   typedef struct packed {
     from_device_e from_device;
@@ -124,30 +86,38 @@ typedef struct packed {
     async_e       async;
   } memcpy_op_x64_t;
 
+  typedef struct packed {
+    logic [1:0] dest_cache;
+    ptr_addr_t  dest_addr;
+    a_value_t   a_value;
+    b_value_t   b_value;
+    c_value_t   c_value;
+    logic       reserved;
+  } memset_op_x64_t;
+
+
+  typedef struct packed {
+    // head(opcode) removed
+    logic [59:0] instruction;
+  } instruction_op_x64_t;
+
+
   // --------------------------------------------------------
   // ===| Compute Micro-Op |=================================
-
-
-
-
-
-
   `define MEMORY_UOP_WIDTH 49
 
   typedef struct packed {
     flags_t    flags;
     ptr_addr_t size_ptr_addr;
     parallel_lane_t parallel_lane;
-  } stlc_control_uop_t;
+  } gemm_control_uop_t;
 
 
   typedef struct packed {
     flags_t    flags;
     ptr_addr_t size_ptr_addr;
     parallel_lane_t parallel_lane;
-  } vdotm_control_uop_t;
-
-
+  } GEMV_control_uop_t;
 
   // ===| Compute Micro-Op |====================================
   // -----------------------------------------------------------

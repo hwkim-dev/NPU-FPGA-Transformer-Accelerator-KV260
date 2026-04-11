@@ -1,6 +1,6 @@
 `include "GLOBAL_CONST.svh"
 `timescale 1ns / 1ps
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 `include "mem_IO.svh"
 `include "npu_interfaces.svh"
 `include "GLOBAL_CONST.svh"
@@ -51,14 +51,12 @@ module NPU_top (
 
   memory_op_t memcpy_cmd_wire;
 
+  logic GEMV_op_x64_valid_wire;
+  logic GEMM_op_x64_valid_wire;
   logic memcpy_op_x64_valid_wire;
-  memory_op_x64_t memcpy_op_x64_wire;
+  logic memset_op_x64_valid_wire;
 
-  logic vdotm_op_x64_valid_wire;
-  vdotm_op_x64_t vdotm_op_x64_wire;
-
-  logic mdotm_op_x64_valid_wire;
-  mdotm_op_x64_t mdotm_op_x64_wire;
+  instruction_op_x64_t instruction;
 
   logic fifo_full_wire;
 
@@ -70,78 +68,53 @@ module NPU_top (
 
       .S_AXIL_CTRL(S_AXIL_CTRL),
 
-      // memcpy
-      .OUT_memcpy_op_x64_valid(OUT_memcpy_op_x64_valid_wire),
-      .memory_op_x64_t(memcpy_op_x64_wire),
+      .OUT_GEMV_op_x64_valid  (GEMV_op_x64_valid_wire),
+      .OUT_GEMM_op_x64_valid  (GEMM_op_x64_valid_wire),
+      .OUT_memcpy_op_x64_valid(memcpy_op_x64_valid_wire),
+      .OUT_memset_op_x64_valid(memset_op_x64_valid_wire),
 
-      .OUT_vdotm_op_x64_valid(OUT_vdotm_op_x64_valid_wire),
-      .vdotm_op_x64_t(vdotm_op_x64),
-
-      .OUT_mdotm_op_x64_valid(OUT_mdotm_op_x64_valid_wire),
-      .mdotm_op_x64_t(mdotm_op_x64)
+      .OUT_memset_op_x64(instruction)
   );
 
-  memory_control_uop_t  mem_uop_wire;
-  stlc_control_uop_t    stlc_uop_wire;
-  vdotm_control_uop_t   vdotm_uop_wire;
+  GEMM_control_uop_t   GEMM_uop_wire;
+  GEMV_control_uop_t   GEMV_uop_wire;
+  memory_control_uop_t LOAD_uop_wire;
+  memory_set_uop_t     mem_set_uop;
 
   Global_Scheduler #() u_Global_Scheduler (
-    .clk_core(clk_core),
-    .rst_n_core(rst_n_core),
+      .clk_core  (clk_core),
+      .rst_n_core(rst_n_core),
 
-    .IN_memcpy_op_x64_valid(memcpy_op_x64_valid_wire),
-    .memcpy_op_x64(memcpy_op_x64_wire),
+      .IN_GEMV_op_x64_valid  (GEMV_op_x64_valid_wire),
+      .IN_GEMM_op_x64_valid  (GEMM_op_x64_valid_wire),
+      .IN_memcpy_op_x64_valid(memcpy_op_x64_valid_wire),
+      .IN_memset_op_x64_valid(memset_op_x64_valid_wire),
 
-    .IN_vdotm_op_x64_valid(vdotm_op_x64_valid_wire),
-    .vdotm_op_x64(vdotm_op_x64_wire),
+      .instruction(instruction),
 
-    .IN_mdotm_op_x64_valid(mdotm_op_x64_valid_wire),
-    .mdotm_op_x64(mdotm_op_x64_wire),
-
-    .OUT_mem_uop(mem_uop_wire),
-    .OUT_stlc_uop(stlc_uop_wire),
-    .OUT_vdotm_uop(vdotm_uop_wire)
+      .OUT_GEMM_uop(GEMM_uop_wire),
+      .OUT_GEMV_uop(GEMV_uop_wire),
+      .OUT_LOAD_uop(LOAD_uop_wire),
+      .OUT_mem_set_uop(mem_set_uop)
   );
 
-  mem_dispatcher #(
-  ) u_mem_dispatcher (
-    .clk_core(clk_core),
-    .rst_n_core(rst_n_core),
+  mem_dispatcher #() u_mem_dispatcher (
+      .clk_core  (clk_core),
+      .rst_n_core(rst_n_core),
 
-    .clk_axi(clk_axi),
-    .rst_axi_n(rst_axi_n),
+      .clk_axi  (clk_axi),
+      .rst_axi_n(rst_axi_n),
 
-    axis_if.slave(S_AXI_HP0_WEIGHT),
-    axis_if.slave(S_AXI_HP1_WEIGHT),
-    axis_if.slave(S_AXI_HP2_WEIGHT),
-    axis_if.slave(S_AXI_HP3_WEIGHT),
+      // ACP      = featureMAP in, out (Full-Duplex), read & write at same time
+      .S_AXIS_ACP_FMAP  (S_AXIS_ACP_FMAP),   // Feature Map Input 0 (128-bit, HPC0)
+      .M_AXIS_ACP_RESULT(M_AXIS_ACP_RESULT), // Final Result Output (128-bit)
 
-    // ACP      = featureMAP in, out (Full-Duplex), read & write at same time
-    axis_if.slave(S_AXIS_ACP_FMAP),  // Feature Map Input 0 (128-bit, HPC0)
-    axis_if.master(M_AXIS_ACP_RESULT),  // Final Result Output (128-bit)
+      .IN_LOAD_uop(LOAD_uop_wire),
+      .IN_mem_set_uop(mem_set_uop),
 
-    .IN_mem_uop(mem_uop_wire),
-    .OUT_fifo_full(fifo_full_wire)
+      .OUT_fifo_full(fifo_full_wire)
+  );
 
-  )
-
-  /*
-    // ===| Weight Pipeline Control (To/From Dispatcher) |=============
-    input  logic [`ADDR_WIDTH_L2-1:0] IN_read_addr_hp [0:3],
-    input  logic                      IN_read_en_hp   [0:3],
-    output logic [             127:0] OUT_read_data_hp[0:3],
-
-    // ===| FMAP/KV Pipeline Control (To/From Dispatcher) |============
-    // ACP (External) Memory Map Control
-    input logic [16:0] IN_acp_base_addr,  // Dispatcher tells where to store incoming FMAP
-    input logic        IN_acp_rx_start,   // Trigger to accept ACP data
-
-    // NPU (Internal) Compute Access (Port B)
-    input  logic         IN_npu_we,
-    input  logic [ 16:0] IN_npu_addr,
-    input  logic [127:0] IN_npu_wdata,
-    output logic [127:0] OUT_npu_rdata
-*/
 
   // ===| FMap Preprocessing Pipeline (The Common Path) |=======
   logic [`FIXED_MANT_WIDTH-1:0] fmap_broadcast       [0:`ARRAY_SIZE_H-1];
@@ -166,70 +139,76 @@ module NPU_top (
       .o_cached_emax(cached_emax_out)
   );
 
-/*
-  // [MOD-1]Weight Pipeline: M dot M
-  // (HP0 -> Systolic Array)
-  // (HP1 -> V dot M = support Systolic Array)
 
-  // [MOD-2] Weight Pipeline: V dot M
-  // (HP2 & HP3 -> V dot M)
-  logic [`AXI_DATA_WIDTH-1:0] weight_fifo_data [0:`AXI_WEIGHT_PORT_CNT-1];
-  logic                       weight_fifo_valid[0:`AXI_WEIGHT_PORT_CNT-1];
-  logic                       weight_fifo_ready[0:`AXI_WEIGHT_PORT_CNT-1];
+  logic [127:0] weight_fifo_data[0:3];
 
-  weight_in_HP_port_fifo #(
-      .DATA_WIDTH(`HP_PORT_SINGLE_WIDTH)
-  ) u_weight_in_HP_port (
-      .IN_HP0(S_AXI_HP0_WEIGHT),
-      .IN_HP1(S_AXI_HP1_WEIGHT),
-      .IN_HP2(S_AXI_HP2_WEIGHT),
-      .IN_HP3(S_AXI_HP3_WEIGHT),
+  mem_HP_buffer u_HP_buffer (
+      // ===| Clock & Reset |======================================
+      .clk_core(clk_core),  // 400MHz
+      .rst_n_core(rst_n_core),
+      .clk_axi(clk_axi),  // 250MHz
+      .rst_axi_n(rst_axi_n),
 
-      .weight_fifo_data (weight_fifo_data),
-      .weight_fifo_valid(weight_fifo_valid),
-      .weight_fifo_ready(weight_fifo_ready)
+      // ===| HP Ports (Weight) - AXI Side |=======================
+      .S_AXI_HP0_WEIGHT(S_AXI_HP0_WEIGHT),
+      .S_AXI_HP1_WEIGHT(S_AXI_HP1_WEIGHT),
+      .S_AXI_HP2_WEIGHT(S_AXI_HP2_WEIGHT),
+      .S_AXI_HP3_WEIGHT(S_AXI_HP3_WEIGHT),
+
+      // ===| Weight Stream - Core Side (To L1 or Dispatcher) |====
+      .M_CORE_HP0_WEIGHT(M_CORE_HP0_WEIGHT),
+      .M_CORE_HP1_WEIGHT(M_CORE_HP1_WEIGHT),
+      .M_CORE_HP2_WEIGHT(M_CORE_HP2_WEIGHT),
+      .M_CORE_HP3_WEIGHT(M_CORE_HP3_WEIGH)
   );
 
 
-*/
+  import GEMV_const_pkg::*;
 
-  vdotm_top #(
-      .line_lengt(32),
-      .line_cnt(128),
-      .fmap_line_cnt(32),
-      .reduction_rate(4),
-      .in_weight_size(`INT4),
-      .in_fmap_size(`BF16),
-      .in_fmap_e_size(`BF16_EXP),
-      .in_fmap_m_size(`BF16_MANTISSA)
-  ) u_vdotm_top (
-      .clk  (clk_core),
-      .rst_n(rst_n_core),
+  GEMV_top #(
+      .param(GEMV_ACC_DEFAULT_CFG)
+  ) u_GEMV_top (
+      .clk(clk),
+      .rst_n(rst_n),
+      .IN_weight_valid_A(M_CORE_HP0_WEIGHT.tvalid),
+      .IN_weight_valid_B(M_CORE_HP1_WEIGHT.tvalid),
+      .IN_weight_valid_C(M_CORE_HP2_WEIGHT.tvalid),
+      .IN_weight_valid_D(M_CORE_HP3_WEIGHT.tvalid),
 
-      // weight
-      .i_valid(weight_fifo_data[]),
-      .IN_weight(weight_fifo_data[]),
+      .IN_weight_A(M_CORE_HP0_WEIGHT.tdata),
+      .IN_weight_B(M_CORE_HP1_WEIGHT.tdata),
+      .IN_weight_C(M_CORE_HP2_WEIGHT.tdata),
+      .IN_weight_D(M_CORE_HP3_WEIGHT.tdata),
 
-      .IN_fmap_broadcast(fmap_broadcast),
-      .IN_fmap_broadcast_valid(fmap_broadcast_valid),
+      .OUT_weight_ready_A(M_CORE_HP0_WEIGHT.tready),
+      .OUT_weight_ready_B(M_CORE_HP1_WEIGHT.tready),
+      .OUT_weight_ready_C(M_CORE_HP2_WEIGHT.tready),
+      .OUT_weight_ready_D(M_CORE_HP3_WEIGHT.tready),
 
-      // e_max (from Cache for Normalization alignment)
-      .IN_cached_emax_out(cached_emax_out),
-
+      .IN_fmap_broadcast(IN_fmap_broadcast),
+      .IN_fmap_broadcast_valid(IN_fmap_broadcast_valid),
+      .IN_num_recur(IN_num_recur),
+      .IN_cached_emax_out(IN_cached_emax_out),
       .activated_lane(activated_lane),
 
-      .OUT_final_fp32(),
-      .OUT_final_valid()
+      //[param.fmap_type_mixed_precision - 1:0]
+      .OUT_final_fmap_A(),
+      .OUT_final_fmap_B(),
+      .OUT_final_fmap_C(),
+      .OUT_final_fmap_D(),
+
+      .OUT_result_valid_A(),
+      .OUT_result_valid_B(),
+      .OUT_result_valid_C(),
+      .OUT_result_valid_D()
   );
-
-
 
   // 3. Systolic Array Engine (Modularized)
   logic [`DSP48E2_POUT_SIZE-1:0] raw_res_sum      [0:`ARRAY_SIZE_H-1];
   logic                          raw_res_sum_valid[0:`ARRAY_SIZE_H-1];
   logic [   `BF16_EXP_WIDTH-1:0] delayed_emax_32  [0:`ARRAY_SIZE_H-1];
 
-  stlc_systolic_top u_systolic_engine (
+  GEMM_systolic_top u_systolic_engine (
       .clk(clk_core),
       .rst_n(rst_n_core),
       .i_clear(npu_clear),
@@ -244,9 +223,9 @@ module NPU_top (
       .cached_emax_out(cached_emax_out),
 
       // Weight Input from FIFO (Direct)
-      .weight_fifo_data (weight_fifo_data[0]),
-      .weight_fifo_valid(weight_fifo_valid[0]),
-      .weight_fifo_ready(weight_fifo_ready[0]),
+      .weight_fifo_data (M_CORE_HP0_WEIGHT.tdata),
+      .weight_fifo_valid(M_CORE_HP0_WEIGHT.tvalid),
+      .weight_fifo_ready(M_CORE_HP0_WEIGHT.tready),
 
       .raw_res_sum(raw_res_sum),
       .raw_res_sum_valid(raw_res_sum_valid),
@@ -262,7 +241,7 @@ module NPU_top (
   genvar n;
   generate
     for (n = 0; n < `ARRAY_SIZE_H; n++) begin : gen_norm
-      stlc_result_normalizer u_norm_seq (
+      gemm_result_normalizer u_norm_seq (
           .clk(clk_core),
           .rst_n(rst_n_core),
           .data_in(raw_res_sum[n]),
@@ -279,7 +258,7 @@ module NPU_top (
   logic                       packed_res_valid;
   logic                       packed_res_ready;
 
-  FROM_stlc_result_packer u_packer (
+  FROM_gemm_result_packer u_packer (
       .clk(clk_core),
       .rst_n(rst_n_core),
       .row_res(norm_res_seq),
@@ -291,26 +270,6 @@ module NPU_top (
   );
 
 
-  /*
-  // Output FIFO
-  xpm_fifo_axis #(
-      .FIFO_DEPTH(`XPM_FIFO_DEPTH),
-      .TDATA_WIDTH(`AXI_DATA_WIDTH),
-      .FIFO_MEMORY_TYPE("block"),
-      .CLOCKING_MODE("independent_clock")
-  ) u_output_fifo (
-      .s_aclk(clk_core),
-      .m_aclk(clk_core),
-      .s_aresetn(rst_n_core),
-      .s_axis_tdata(packed_res_data),
-      .s_axis_tvalid(packed_res_valid),
-      .s_axis_tready(packed_res_ready),
-      .m_axis_tdata(m_axis_result_tdata),
-      .m_axis_tvalid(m_axis_result_tvalid),
-      .m_axis_tready(m_axis_result_tready)
-  );
-
-*/
   // Status Assignment
   assign mmio_npu_stat[1] = 1'b0;
   assign mmio_npu_stat[31:2] = 30'd0;

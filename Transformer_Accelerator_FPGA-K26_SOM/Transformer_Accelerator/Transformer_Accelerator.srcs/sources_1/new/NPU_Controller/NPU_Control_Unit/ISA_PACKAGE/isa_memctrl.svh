@@ -4,35 +4,31 @@ package isa_memctrl;
   `define PORT_MOD_E_READ 0
 
   typedef enum logic [3:0] {
-    data_to_host              = 4'h0,
-    data_to_L2_cache          = 4'h1,
-    data_to_L1_cache_stlc_in  = 4'h2,
-    data_to_L1_cache_vdotm_in = 4'h3,
-    data_to_fmap_shape        = 4'h4,
-    data_to_weight_shape      = 4'h5
+    data_to_host             = 4'h0,
+    data_to_GLOBAL_cache         = 4'h1,
+    data_to_L1_cache_gemm_in = 4'h2,
+    data_to_L1_cache_GEMV_in = 4'h3,
   } data_dest_e;
 
   typedef enum logic [3:0] {
-    data_from_host               = 4'h0,
-    data_from_L2_cache           = 4'h1,
-    data_from_L1_cache_stlc_res  = 4'h2,
-    data_from_L1_cache_vdotm_res = 4'h3
+    data_from_host              = 4'h0,
+    data_from_GLOBAL_cache          = 4'h1,
+    data_from_L1_cache_gemm_res = 4'h2,
+    data_from_L1_cache_GEMV_res = 4'h3
   } data_source_e;
 
   typedef enum logic [7:0] {
-    from_host_to_L2 = {data_from_host, data_to_L2_cache},
+    from_host_to_L2 = {data_from_host, data_to_GLOBAL_cache},
 
-    from_host_to_fmap_shape   = {data_from_host, data_to_fmap_shape},
-    from_host_to_weight_shape = {data_from_host, data_to_weight_shape},
+    from_L2_to_host = {data_from_GLOBAL_cache, data_to_host},
 
-    from_L2_to_host = {data_from_L2_cache, data_to_host},
+    from_L2_to_L1_GEMM = {data_from_GLOBAL_cache, data_to_L1_cache_GEMM_in},
+    from_L2_to_L1_GEMV = {data_from_GLOBAL_cache, data_to_L1_cache_GEMV_in},
 
-    from_L2_to_L1_stlc  = {data_from_L2_cache, data_to_L1_cache_stlc_in},
-    from_L2_to_L1_vdotm = {data_from_L2_cache, data_to_L1_cache_vdotm_in},
-
-    from_vdotm_res_to_L2 = {data_from_L1_cache_vdotm_res, data_to_L2_cache},
-    from_stlc_res_to_L2  = {data_from_L1_cache_stlc_res, data_to_L2_cache}
+    from_GEMV_res_to_L2 = {data_from_L1_cache_GEMV_res, data_to_GLOBAL_cache},
+    from_GEMM_res_to_L2 = {data_from_L1_cache_GEMM_res, data_to_GLOBAL_cache}
   } data_route_e;
+
 
   typedef struct packed {
     data_route_e data_dest;
@@ -45,6 +41,18 @@ package isa_memctrl;
     async_e async;
   } memory_control_uop_t;
 
+  typedef enum logic [1:0] {
+    data_to_fmap_shape   = 2'h0,
+    data_to_weight_shape = 2'h1
+  } dest_cache_e;
+
+  typedef struct packed {
+    dest_cache_e dest_cache;
+    ptr_addr_t   dest_addr;
+    a_value_t    a_value;
+    b_value_t    b_value;
+    c_value_t    c_value;
+  } memory_set_uop_t;
 
   // mem dispatcher.sv
   typedef enum logic {
@@ -64,98 +72,4 @@ package isa_memctrl;
     logic [16:0] npu_end_addr;
   } npu_uop_t;  //33 bit == [32:0]
 
-
-  /*
-  function automatic [3:0] option_data_to_host(
-    input data_dest_e dest,
-    input data_addr_t dest_addr
-    );
-    case(dest)
-      data_from_L2_cache: begin
-        mem_uop.src_addr
-      end
-    default: begin end
-    endcase
-  endfunction
-
-
-  acp_rx_start
-  acp_write_en
-
-  function automatic [3:0] option_data_to_L2_cache(
-    input data_dest_e dest,
-    input data_addr_t dest_addr
-    );
-    case(dest)
-      data_from_host: begin
-        option_data_to_L2_cache = dest_addr;
-      end
-      data_from_L1_cache_stlc_res : begin
-
-      end
-      data_from_L1_cache_vdotm_res: begin
-
-      end
-
-    default: begin end
-    endcase
-  endfunction
-
-
-  function automatic [3:0] option_data_to_L1_cache_stlc_res(input data_dest_e dest);
-    case(dest)
-    :begin
-    end
-    default: begin end
-    endcase
-  endfunction
-
-
-  function automatic [3:0] option_data_to_L1_cache_vdotm_res(input data_dest_e dest);
-    case(dest)
-    :begin
-    end
-    default: begin end
-    endcase
-  endfunction
-*/
-
-  /*
-  function automatic [3:0] option_data_from_host(input data_dest_e dest);
-    case(dest)
-      data_to_L2_cache: begin
-        mem_uop.dest_addr
-      end
-    default: begin end
-    endcase
-  endfunction
-
-
-  function automatic [3:0] option_data_from_L2_cache(input data_dest_e dest);
-    case(dest)
-    :begin
-    end
-    default: begin end
-    endcase
-  endfunction
-
-
-  function automatic [3:0] option_data_from_L1_cache_stlc_res(input data_dest_e dest);
-    case(dest)
-    :begin
-    end
-    default: begin end
-    endcase
-  endfunction
-
-
-  function automatic [3:0] option_data_from_L1_cache_vdotm_res(input data_dest_e dest);
-    case(dest)
-    :begin
-    end
-    default: begin end
-    endcase
-  endfunction
-
-*/
 endpackage
