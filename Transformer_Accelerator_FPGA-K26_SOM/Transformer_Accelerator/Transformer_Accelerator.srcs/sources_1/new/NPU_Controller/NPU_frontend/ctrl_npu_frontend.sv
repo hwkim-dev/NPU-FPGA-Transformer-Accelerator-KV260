@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 `include "npu_interfaces.svh"
 `include "GLOBAL_CONST.svh"
 

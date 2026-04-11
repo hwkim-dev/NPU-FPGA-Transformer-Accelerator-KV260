@@ -20,13 +20,11 @@ module npu_controller_top #(
     //output instruction_t OUT_inst,
 
     output logic OUT_memcpy_uop_x64_valid;
-    output memory_uop_x64_t OUT_memcpy_uop_x64;
+    output logic OUT_GEMV_uop_x64_valid;
+    output logic OUT_GEMM_uop_x64_valid;
+    output logic OUT_memset_op_x64_valid;
 
-    output logic OUT_vdotm_uop_x64_valid;
-    output vdotm_uop_x64_t  OUT_vdotm_uop_x64;
-
-    output logic OUT_mdotm_uop_x64_valid;
-    output mdotm_uop_x64_t  OUT_mdotm_uop_x64;
+    output instruction_op_x64_t [59:0] OUT_op_x64;
 );
 
     logic [`ISA_WIDTH-1:0] instruction_valid;
@@ -64,24 +62,22 @@ module npu_controller_top #(
     logic valid_inst;
 
     memory_uop_x64_t memcpy_uop_x64;
-    vdotm_uop_x64_t vdotm_uop_x64;
-    mdotm_uop_x64_t mdotm_uop_x64;
+    GEMV_uop_x64_t GEMV_uop_x64;
+    GEMM_uop_x64_t GEMM_uop_x64;
 
-    cu_npu_decoder u_decoder(
+    ctrl_npu_decoder u_decoder(
         .clk(clk),
         .rst_n(rst_n),
         .IN_RAW_instruction(raw_instruction),
         .raw_instruction_pop_valid(raw_instruction_pop_valid),
         .OUT_fetch_PC_ready(fetch_PC_ready),
 
-        .OUT_memcpy_uop_x64_valid(memcpy_uop_x64_valid),
-        .OUT_memcpy_uop_x64(memcpy_uop_x64),
+        .OUT_memcpy_uop_x64_valid(OUT_memcpy_uop_x64_valid),
+        .OUT_GEMV_uop_x64_valid(OUT_GEMV_uop_x64_valid),
+        .OUT_GEMM_uop_x64_valid(OUT_GEMM_uop_x64_valid),
+        .OUT_memset_op_x64_valid(OOUT_memset_op_x64_valid),
 
-        .OUT_vdotm_uop_x64_valid(vdotm_uop_x64_valid),
-        .OUT_vdotm_uop_x64(vdotm_uop_x64),
-
-        .OUT_mdotm_uop_x64_valid(mdotm_uop_x64_valid),
-        .OUT_mdotm_uop_x64(mdotm_uop_x64)
+        .OUT_op_x64(OUT_op_x64)
     );
 
 endmodule
