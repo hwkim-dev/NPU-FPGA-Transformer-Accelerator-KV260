@@ -1,14 +1,14 @@
 `include "GLOBAL_CONST.svh"
 `timescale 1ns / 1ps
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 
 /**
- * Module: stlc_result_normalizer
+ * Module: gemm_result_normalizer
  * Description:
  *   Converts 48-bit 2's complement to Normalized Format (BF16-like).
  *   Pipeline: [1] Sign-Mag -> [2] LOD -> [3] Barrel Shift -> [4] Exp Adj
  */
-module stlc_result_normalizer (
+module gemm_result_normalizer (
     input logic clk,
     input logic rst_n,
 
@@ -131,10 +131,10 @@ endmodule
 
 `timescale 1ns / 1ps
 
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 
 
-module stlc_result_normalizer (
+module gemm_result_normalizer (
     input  logic clk,
     input  logic rst_n,
     input  logic [47:0] data_in,

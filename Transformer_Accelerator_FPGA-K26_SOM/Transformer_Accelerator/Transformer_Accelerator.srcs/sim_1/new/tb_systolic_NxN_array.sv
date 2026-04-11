@@ -2,14 +2,14 @@
 /*
 `timescale 1ns / 1ps
 
-`include "stlc_Array.svh"
+`include "gemm_Array.svh"
 
 module tb_systolic_NxN_array;
     // Parameters
     localparam ARRAY_H = `ARRAY_SIZE_H;
     localparam ARRAY_V = `ARRAY_SIZE_V;
-    localparam DATA_WIDTH_H = `STLC_MAC_UNIT_IN_H;
-    localparam DATA_WIDTH_V = `STLC_MAC_UNIT_IN_V;
+    localparam DATA_WIDTH_H = `gemm_MAC_UNIT_IN_H;
+    localparam DATA_WIDTH_V = `gemm_MAC_UNIT_IN_V;
 
     // Signals
     logic   clk;
