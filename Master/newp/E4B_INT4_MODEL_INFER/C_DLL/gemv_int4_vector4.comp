@@ -1,0 +1,58 @@
+#version 450
+// Calculate 32 outputs (rows) in parallel at once (workgroup size)
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+// persistent buffers
+layout(binding = 0) readonly buffer InputX { float x[]; };
+// Key point: declare it as an uvec4[] (16-byte vector) array, not uint[].
+layout(binding = 1) readonly buffer MatP { uvec4 mat_vec4[]; }; 
+layout(binding = 2) readonly buffer Scale { float scale[]; };
+layout(binding = 3) writeonly buffer Output { float out_vec[]; };
+
+// Push Constants
+layout(push_constant) uniform PushConstants {
+    uint M_out;
+    uint K_in_vector4s; // K dimension divided by uvec4 units (32 INT4)
+} params;
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= params.M_out) return;
+
+    float acc = 0.0;
+    // Calculate the starting uvec4 index of that row in the matrix buffer
+    uint row_offset = row * params.K_in_vector4s;
+
+    // Loop optimization (Read 16 bytes per loop and process 32 INT4 weights at once!)
+    for (uint k = 0; k < params.K_in_vector4s; k++) {
+        // Sweeping the 128-bit bucket.
+        uvec4 packed_128 = mat_vec4[row_offset + k];
+        // Starting index of vector x (32 INT4 covers per uvec4)
+        uint x_idx = k * 32; 
+
+        // Unpacking 4 uint32 elements in uvec4 in order
+        for (int v = 0; v < 4; v++) {
+            uint packed_32 = packed_128[v]; // x, y, z, w components
+            uint x_v_idx = x_idx + (v * 8); // Each uint is responsible for 8 x elements
+
+            // Split 32 bits into 8 bits each 4 times and unpack (maintain existing logic, but pay attention to index)
+            for (int i = 0; i < 4; i++) {
+                uint byte_val = (packed_32 >> (i * 8)) & 0xFF;
+                
+                // Lowest 4 bit processing (Sign-extension)
+                int low = int(byte_val & 0x0F);
+                if (low > 7) low -= 16;
+                
+                // Processing of the upper 4 bits (Sign-extension)
+                int high = int((byte_val >> 4) & 0x0F);
+                if (high > 7) high -= 16;
+
+                // Accumulate by multiplying by the value of vector x
+                acc += x[x_v_idx + i * 2] * float(low) + x[x_v_idx + i * 2 + 1] * float(high);
+            }
+        }
+    }
+    
+    // Multiply the final result by Scale and write it to the output buffer.
+    out_vec[row] = acc * scale[row];
+}
