@@ -13,6 +13,14 @@
 
 ## Project Overview
 
+TinyNPU-Gemma is a custom SystemVerilog-based Neural Processing Unit (NPU) engineered from the ground up to accelerate the quantized Gemma 3N (E2B/E4B) Large Language Model on a bare-metal Xilinx Kria KV260 FPGA.
+
+**Software Baseline (x64):**
+This project is the hardware-accelerated adaptation of my baseline x64 software implementation, [llm-lite 🔗](https://github.com/hwkim-dev/llm-lite). While `llm-lite` executes the Gemma 3N E4B model on standard CPU environments, TinyNPU-Gemma re-architects the core inference pipeline to overcome inherent edge-device memory bottlenecks. The architecture is meticulously designed to push the absolute physical constraints of the KV260 platform, exploiting its 1,248 DSP48E2 slices and 144 Block RAMs (BRAMs) to the limit.
+
+This project encompasses a full-stack hardware-software co-design approach. It seamlessly integrates a SystemVerilog hardware accelerator, a Python-based Golden Model for Trace-Driven Verification, CPU SIMD optimizations, and a high-performance AXI Direct Memory Access (AXI DMA) pipeline.
+
+
 TinyNPU-Gemma is a custom SystemVerilog-based Neural Processing Unit (NPU) engineered from the ground up to accelerate the quantized Gemma 3N (E2B/E4B) Large Language Model on a bare-metal Xilinx Kria KV260 FPGA. The architecture is meticulously designed to push the absolute physical constraints of the KV260 platform, exploiting its 1,248 DSP48E2 slices and 144 Block RAMs (BRAMs) to the limit.
 
 This project encompasses a full-stack hardware-software co-design approach. It seamlessly integrates a SystemVerilog hardware accelerator, a Python-based Golden Model for Trace-Driven Verification, CPU SIMD optimizations, and a high-performance AXI Direct Memory Access (AXI DMA) pipeline to overcome inherent edge-device memory bottlenecks.
