@@ -1,0 +1,3 @@
+[submodule "sw/gemma3NE4B"]
+	path = sw/gemma3NE4B
+	url = https://github.com/hwkim-dev/llm-lite.git
