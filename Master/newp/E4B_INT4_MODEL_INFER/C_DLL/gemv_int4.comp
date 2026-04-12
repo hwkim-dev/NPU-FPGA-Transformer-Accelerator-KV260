@@ -1,0 +1,54 @@
+#version 450
+//This is kernel code that hundreds of GPU cores will execute simultaneously. It looks very similar to the C language.
+//Here, will write INT4 unpacking (>> 4, & 0x0F) and multiplication accumulation (Dot Product), which we wrote earlier in Python/Taichi, as GPU parallel code.
+// Workgroup size: Parallel calculation of 32 outputs (rows) at a time
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+// Memory buffers to be shared with CPU and Zero-Copy (differentiated by Binding number)
+layout(binding = 0) readonly buffer InputX { float x[]; };
+// For GPU performance, read the entire array as a 4-byte (uint32) array instead of 1 byte (uint8).
+layout(binding = 1) readonly buffer MatP { uint mat[]; };
+layout(binding = 2) readonly buffer Scale { float scale[]; };
+layout(binding = 3) writeonly buffer Output { float out_vec[]; };
+
+// Lightweight variables to pass each time when running on CPU (dimension size)
+layout(push_constant) uniform PushConstants {
+    uint M_out;
+    uint K_in_uints; // Number of K dimensions divided by uint (4 bytes = 8 INT4)
+} params;
+
+void main() {
+    // Output row number to be handled by the current thread
+    uint row = gl_GlobalInvocationID.x;
+    
+    // If the calculation range is exceeded, the thread terminates.
+    if (row >= params.M_out) return;
+
+    float acc = 0.0;
+    uint row_offset = row * params.K_in_uints;
+
+    // Matrix multiplication loop (processes 8 INT4 weights by reading 4 bytes per loop!)
+    for (uint k = 0; k < params.K_in_uints; k++) {
+        uint packed_32 = mat[row_offset + k];
+        uint x_idx = k * 8; // Starting index of input vector x
+
+        // Split 32 bits into 8 bits each 4 times and unpack
+        for (int i = 0; i < 4; i++) {
+            uint byte_val = (packed_32 >> (i * 8)) & 0xFF;
+            
+            // Lowest 4 bit processing (Sign-extension)
+            int low = int(byte_val & 0x0F);
+            if (low > 7) low -= 16;
+            
+            // Processing of the upper 4 bits (Sign-extension)
+            int high = int((byte_val >> 4) & 0x0F);
+            if (high > 7) high -= 16;
+
+            // Accumulate by multiplying by the value of vector x
+            acc += x[x_idx + i * 2] * float(low) + x[x_idx + i * 2 + 1] * float(high);
+        }
+    }
+    
+    // Multiply the final result by Scale and write it to the output buffer.
+    out_vec[row] = acc * scale[row];
+}
