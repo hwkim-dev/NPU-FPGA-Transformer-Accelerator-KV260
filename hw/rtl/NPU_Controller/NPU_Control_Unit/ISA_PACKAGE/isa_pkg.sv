@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 // ===| ISA Package |=============================================================
 // Master type package for the uCA (micro Compute Architecture) ISA.
 // All consumers do `import isa_pkg::*;` — no `include` needed downstream.

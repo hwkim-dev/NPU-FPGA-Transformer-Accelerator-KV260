@@ -47,7 +47,6 @@ module ctrl_npu_decoder (
     if (!rst_n) begin
       OUT_valid        <= 4'b0000;
       cvo_valid_ff     <= 1'b0;
-      OUT_fetch_PC_ready <= `TRUE;
       OUT_op_x64       <= '0;
     end else begin
       OUT_valid      <= 4'b0000;
