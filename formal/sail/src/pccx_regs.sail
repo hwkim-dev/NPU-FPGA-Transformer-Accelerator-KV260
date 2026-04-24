@@ -47,3 +47,36 @@ register sfu_ops_committed : bitvector(32)
  * a concurrency tracker; the refinement proof against the dispatcher's
  * real AXI-Lite command FIFO comes later. */
 register async_inflight : bit
+
+/* ────────────────────────────────────────────────────────────────────── *
+ * Last-committed operand observables (pccx_execute 3rd increment)
+ * ────────────────────────────────────────────────────────────────────── *
+ * The 2nd increment's `execute_*` helpers accepted each opcode body but
+ * committed uniform effects — the operand fields were round-tripped
+ * through `reencode_body` and otherwise discarded.  This increment
+ * threads the decoded operands into **per-unit "last committed" slots**
+ * so refinement proofs can assert a concrete RTL step wrote the same
+ * dest/src addresses the Sail model decoded.
+ *
+ * The widths track `pccx_types.sail` exactly (isa_pkg.sv §3), so a RTL
+ * field-width drift fails the Sail typecheck before it reaches xsim:
+ *   - MAC (GEMV, GEMM)   : 17-bit dest_reg + 17-bit src_addr
+ *   - DMA MEMCPY         : 17-bit dest_addr + 17-bit src_addr (MEMSET's
+ *                          6-bit shape-cache pointer is deliberately
+ *                          excluded — it indexes a shape table the
+ *                          model does not yet abstract)
+ *   - SFU CVO            : 17-bit dst_addr + 17-bit src_addr +
+ *                          16-bit length (the only opcode with an
+ *                          architecturally-observable element count)
+ *
+ * Reset values are all-zero at cold start, matching how xsim's `pccx`
+ * trace dumper records a fresh pipeline before the first dispatch.
+ * ────────────────────────────────────────────────────────────────────── */
+
+register last_mac_dst    : dest_addr_t
+register last_mac_src    : src_addr_t
+register last_dma_dst    : dest_addr_t
+register last_dma_src    : src_addr_t
+register last_sfu_dst    : addr_t
+register last_sfu_src    : src_addr_t
+register last_sfu_length : length_t
