@@ -1,28 +1,37 @@
 /* ──────────────────────────────────────────────────────────────────────── *
  * pccx — execute.sail
  * ──────────────────────────────────────────────────────────────────────── *
- * Executable semantics — second increment.
+ * Executable semantics — third increment.
  *
  * 1st increment shipped the cycle counter + `record_event` stub + a
- * single monolithic `step` that committed any opcode uniformly.  This
- * 2nd increment introduces **concrete MAC / DMA / SFU effects**:
+ * single monolithic `step`.  2nd increment introduced per-opcode
+ * `execute_<op>` helpers, per-unit commit counters (MAC / DMA / SFU),
+ * async-flag observation, and PC advance — but each helper still only
+ * looked at its body to re-encode the trace word; the decoded operand
+ * fields were round-tripped and otherwise discarded.
  *
- *   - Per-opcode `execute_<op>` helpers, one `match` arm each.
- *   - Per-unit commit counters bumped in `pccx_regs.sail`:
- *       * MAC : GEMV, GEMM
- *       * DMA : MEMCPY, MEMSET
- *       * SFU : CVO
- *   - Async-flag observation: MEMCPY and CVO raise `async_inflight`
- *     when their ASYNC bit is set.
- *   - Program-counter advance: one architectural instruction step per
- *     `execute_*` call.
+ * This 3rd increment wires the **decoded operands** into per-unit
+ * "last committed" observables:
  *
- * The execute pass is still **non-interpreting w.r.t. data** — we do
- * not model the MAC array's INT4 × INT8 numeric outputs here; that
- * work belongs to the 3rd increment once the RTL MAC / CORDIC math is
- * frozen.  What this commit gives us is a refinement target: any RTL
- * dispatcher that claims to commit a GEMV must bump `mac_ops_committed`
- * exactly once.
+ *   - MAC   : dest_reg + src_addr, written by execute_gemv / execute_gemm
+ *   - DMA   : dest_addr + src_addr, written by execute_memcpy
+ *             (MEMSET's 6-bit shape-cache pointer is deliberately not
+ *              surfaced here; it indexes a shape table that the model
+ *              does not yet abstract.)
+ *   - SFU   : dst_addr + src_addr + length, written by execute_cvo
+ *
+ * The helpers still advance `cycle` by a coarse, latency-typed (not
+ * latency-accurate) estimate — length-scaled latency would drift from
+ * the 2nd increment's explicit scope note and belongs to the accurate-
+ * cycle pass that follows the `.pccx` writer (M4.9).
+ *
+ * The execute pass remains **non-interpreting w.r.t. data** — we do
+ * not model the MAC array's INT4 × INT8 numeric outputs here; that work
+ * still belongs to a later increment once the RTL MAC / CORDIC math is
+ * frozen.  What this commit gives us is a sharper refinement target:
+ * any RTL dispatcher that claims to commit a GEMV must both bump
+ * `mac_ops_committed` and drive `last_mac_{dst,src}` to the exact
+ * decoded 17-bit fields.
  * ──────────────────────────────────────────────────────────────────────── */
 
 /* ── Low-level effect hooks ──────────────────────────────────────────── */
@@ -107,18 +116,24 @@ function note_async(a : async_e) -> unit = {
  *   1. records the trace event (opcode tag + re-encoded body)
  *   2. advances the cycle counter by the estimated latency
  *   3. bumps the relevant unit's commit counter by 1
- *   4. advances the PC and marks `committed_any`
- *   5. (async ops only) raises `async_inflight`
+ *   4. (3rd increment) latches the decoded operands into per-unit
+ *      `last_*` observables so the RTL refinement proof has a concrete
+ *      dest/src address to compare against
+ *   5. advances the PC and marks `committed_any`
+ *   6. (async ops only) raises `async_inflight`
  *
  * The execution order here is the architectural commit order — the RTL
  * refinement proof will assert: any RTL commit event on unit U bumps
- * exactly one counter, in PC order, with the same opcode tag recorded.
+ * exactly one counter, in PC order, with the same opcode tag recorded
+ * and the same decoded operand fields latched.
  * ──────────────────────────────────────────────────────────────────── */
 
 function execute_gemv(b : gemv_body_t) -> unit = {
   record_event(cycle, encdec_opcode(OP_GEMV), reencode_body(Gemv(b)));
   advance_cycle(estimated_latency(Gemv(b)));
   mac_ops_committed = mac_ops_committed + ops_one;
+  last_mac_dst = b.dest_reg;
+  last_mac_src = b.src_addr;
   advance_pc();
   committed_any = bitone;
 }
@@ -127,6 +142,8 @@ function execute_gemm(b : gemm_body_t) -> unit = {
   record_event(cycle, encdec_opcode(OP_GEMM), reencode_body(Gemm(b)));
   advance_cycle(estimated_latency(Gemm(b)));
   mac_ops_committed = mac_ops_committed + ops_one;
+  last_mac_dst = b.dest_reg;
+  last_mac_src = b.src_addr;
   advance_pc();
   committed_any = bitone;
 }
@@ -135,6 +152,8 @@ function execute_memcpy(b : memcpy_body_t) -> unit = {
   record_event(cycle, encdec_opcode(OP_MEMCPY), reencode_body(Memcpy(b)));
   advance_cycle(estimated_latency(Memcpy(b)));
   dma_ops_committed = dma_ops_committed + ops_one;
+  last_dma_dst = b.dest_addr;
+  last_dma_src = b.src_addr;
   note_async(b.async);
   advance_pc();
   committed_any = bitone;
@@ -144,6 +163,10 @@ function execute_memset(b : memset_body_t) -> unit = {
   record_event(cycle, encdec_opcode(OP_MEMSET), reencode_body(Memset(b)));
   advance_cycle(estimated_latency(Memset(b)));
   dma_ops_committed = dma_ops_committed + ops_one;
+  /* MEMSET deliberately does not latch a last_dma_{dst,src}: its
+   * destination is a 6-bit shape-cache pointer (ptr_addr_t), not a
+   * 17-bit address, and it has no src_addr at all.  Surfacing it
+   * would require the shape-table abstraction, which lands later. */
   advance_pc();
   committed_any = bitone;
 }
@@ -152,6 +175,9 @@ function execute_cvo(b : cvo_body_t) -> unit = {
   record_event(cycle, encdec_opcode(OP_CVO), reencode_body(Cvo(b)));
   advance_cycle(estimated_latency(Cvo(b)));
   sfu_ops_committed = sfu_ops_committed + ops_one;
+  last_sfu_dst    = b.dst_addr;
+  last_sfu_src    = b.src_addr;
+  last_sfu_length = b.length;
   note_async(b.async);
   advance_pc();
   committed_any = bitone;

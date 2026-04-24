@@ -74,3 +74,23 @@ function step_accepts_memset() -> unit =
 
 function step_accepts_cvo() -> unit =
   step(make_word(0x4, 0x000000000000000))
+
+/* ── Last-operand observables smoke (typecheck-only, 3rd increment) ──
+ *
+ * The 3rd increment wires decoded operands into per-unit "last
+ * committed" registers.  These helpers lock each observable's width
+ * into the type checker: if someone widens `dest_addr_t` in
+ * `pccx_types.sail` without updating `pccx_regs.sail`, these read-
+ * backs stop composing with their declared return types.
+ *
+ * Values are not asserted — behavioural coverage of the exact decoded
+ * operand arrives with the `.pccx` writer (M4.9).
+ * ────────────────────────────────────────────────────────────────── */
+
+function read_last_mac_dst() -> dest_addr_t = last_mac_dst
+function read_last_mac_src() -> src_addr_t  = last_mac_src
+function read_last_dma_dst() -> dest_addr_t = last_dma_dst
+function read_last_dma_src() -> src_addr_t  = last_dma_src
+function read_last_sfu_dst() -> addr_t      = last_sfu_dst
+function read_last_sfu_src() -> src_addr_t  = last_sfu_src
+function read_last_sfu_len() -> length_t    = last_sfu_length
