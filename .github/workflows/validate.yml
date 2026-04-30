@@ -2,9 +2,8 @@ name: repo-validate
 
 # Lightweight always-run gate. Fast, decisive, no external installs.
 # Designed to be a stable required-status-check candidate for the main
-# branch. The Sail typecheck workflow has a strict paths filter
-# (formal/sail/**), so it cannot back a required check for arbitrary
-# PRs; this workflow fills that gap.
+# branch. The Sail typecheck workflow has a strict paths filter and
+# cannot back a required check on its own; this fills that gap.
 
 on:
   push:
@@ -30,10 +29,20 @@ jobs:
       - name: Forbidden basename scan
         run: |
           set -e
-          bad=$(git ls-files | grep -iE '(^|/)(CLAUDE|GEMINI|AGENTS|JULES_REVIEW)\.md$|^TODO\.md$|^\.private-ai/|^\.github/workflows/private-ci\.yml$|^\.github/workflows/gemini-.*\.yml$|_Tasks_for_Claude' || true)
+          bad=""
+          for name in CLAUDE.md GEMINI.md AGENTS.md JULES_REVIEW.md TODO.md; do
+            hits=$(git ls-files | grep -E "(^|/)${name}\$" || true)
+            if [ -n "$hits" ]; then bad="${bad}${hits}"$'\n'; fi
+          done
+          for prefix in '.private-ai/' '.github/workflows/private-ci.yml' '.github/workflows/gemini-'; do
+            hits=$(git ls-files | grep -F "$prefix" || true)
+            if [ -n "$hits" ]; then bad="${bad}${hits}"$'\n'; fi
+          done
+          tasks=$(git ls-files | grep -F "_Tasks_for_Claude" || true)
+          if [ -n "$tasks" ]; then bad="${bad}${tasks}"$'\n'; fi
           if [ -n "$bad" ]; then
             echo "::error::Forbidden basenames present in tracked tree:"
-            echo "$bad"
+            printf '%s' "$bad"
             exit 1
           fi
 
@@ -42,14 +51,26 @@ jobs:
           set -e
           # pccx and pccx-lab moved to pccxai on 2026-04-30. The repo's
           # own README intentionally keeps a 'Related repos' link to
-          # hkimw/llm-bottleneck-lab (personal research repo, not part
-          # of the org transfer); that match is allowed via repo path.
-          bad=$(git grep -nE \
-              'hwkim-dev|hkimw\.github\.io/pccx|hwkim-dev\.github\.io/pccx|github\.com/hwkim-dev/pccx|github\.com/hkimw/pccx([^-a-zA-Z]|$)|github\.com/hkimw/pccx-lab|github\.com/hkimw/pccx-FPGA-NPU-LLM-kv260' \
-              -- ':!.github/workflows/validate.yml' || true)
+          # hkimw/llm-bottleneck-lab (personal research repo); the scan
+          # below targets transferred-repo paths only.
+          bad=""
+          for pattern in \
+            'hwkim-dev' \
+            'hkimw.github.io/pccx' \
+            'hwkim-dev.github.io/pccx' \
+            'github.com/hwkim-dev/pccx' \
+            'github.com/hkimw/pccx-lab' \
+            'github.com/hkimw/pccx-FPGA-NPU-LLM-kv260'
+          do
+            hits=$(git grep -nF -- "$pattern" -- ':!.github/workflows/validate.yml' || true)
+            if [ -n "$hits" ]; then bad="${bad}${hits}"$'\n'; fi
+          done
+          # Bare github.com/hkimw/pccx (not followed by -lab or -FPGA-...).
+          hits=$(git grep -nP 'github\.com/hkimw/pccx(?![A-Za-z0-9-])' -- ':!.github/workflows/validate.yml' || true)
+          if [ -n "$hits" ]; then bad="${bad}${hits}"$'\n'; fi
           if [ -n "$bad" ]; then
-            echo "::error::Stale owner URLs found (transferred repos moved to pccxai/*):"
-            echo "$bad"
+            echo "::error::Stale owner URLs found:"
+            printf '%s' "$bad"
             exit 1
           fi
 
@@ -67,6 +88,6 @@ jobs:
           set -e
           for f in .github/workflows/*.yml .github/workflows/*.yaml; do
             [ -f "$f" ] || continue
-            python3 -c "import sys, yaml; yaml.safe_load(open('$f'))" \
+            python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1]))" "$f" \
               || { echo "::error::YAML parse error in $f"; exit 1; }
           done
