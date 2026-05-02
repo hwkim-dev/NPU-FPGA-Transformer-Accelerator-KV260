@@ -106,14 +106,10 @@ Blocker:
   `PCCX_BITSTREAM_PATH`, `PCCX_RUN_PROMPT`, `PCCX_RUN_TOKENS`,
   `PCCX_BOARD_RUNTIME_DIR`.
 
-Gemma host artifacts were inspected read-only under:
-
-```text
-/home/hwkim/Desktop/github/hkimw/llm-bottleneck-lab/x64/gemma3N_E4B
-```
-
-The host has INT4 safetensor shards and large mmap/cache artifacts, but
-no KV260 staging or model execution was performed.
+A maintainer-local Gemma host artifact directory was inspected read-only;
+the local absolute path is intentionally omitted from tracked evidence.
+The host has INT4 safetensor shards and large mmap/cache artifacts, but no
+KV260 staging or model execution was performed.
 
 ## Performance Boundary
 
