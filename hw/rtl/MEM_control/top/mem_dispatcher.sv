@@ -83,6 +83,8 @@ module mem_dispatcher #() (
   logic [16:0] fmap_arr_shape_X;
   logic [16:0] fmap_arr_shape_Y;
   logic [16:0] fmap_arr_shape_Z;
+  shape_xyz_t  fmap_shape_wr_xyz;
+  shape_xyz_t  fmap_shape_rd_xyz;
   logic [16:0] fmap_read_arr_shape_X;
   logic [16:0] fmap_read_arr_shape_Y;
   logic [16:0] fmap_read_arr_shape_Z;
@@ -93,6 +95,8 @@ module mem_dispatcher #() (
   logic [16:0] weight_arr_shape_X;
   logic [16:0] weight_arr_shape_Y;
   logic [16:0] weight_arr_shape_Z;
+  shape_xyz_t  weight_shape_wr_xyz;
+  shape_xyz_t  weight_shape_rd_xyz;
   logic [16:0] weight_read_arr_shape_X;
   logic [16:0] weight_read_arr_shape_Y;
   logic [16:0] weight_read_arr_shape_Z;
@@ -128,32 +132,38 @@ module mem_dispatcher #() (
     end
   end
 
-  fmap_array_shape u_fmap_shape (
+  assign fmap_shape_wr_xyz.x = fmap_arr_shape_X;
+  assign fmap_shape_wr_xyz.y = fmap_arr_shape_Y;
+  assign fmap_shape_wr_xyz.z = fmap_arr_shape_Z;
+  assign fmap_read_arr_shape_X = fmap_shape_rd_xyz.x;
+  assign fmap_read_arr_shape_Y = fmap_shape_rd_xyz.y;
+  assign fmap_read_arr_shape_Z = fmap_shape_rd_xyz.z;
+
+  shape_const_ram u_fmap_shape (
       .clk   (clk_core),
       .rst_n (rst_n_core),
       .wr_en (fmap_write_enable),
       .wr_addr(fmap_shape_wr_addr),
-      .wr_val0(fmap_arr_shape_X),
-      .wr_val1(fmap_arr_shape_Y),
-      .wr_val2(fmap_arr_shape_Z),
+      .wr_xyz(fmap_shape_wr_xyz),
       .rd_addr(fmap_shape_rd_addr),
-      .rd_val0(fmap_read_arr_shape_X),
-      .rd_val1(fmap_read_arr_shape_Y),
-      .rd_val2(fmap_read_arr_shape_Z)
+      .rd_xyz(fmap_shape_rd_xyz)
   );
 
-  weight_array_shape u_weight_shape (
+  assign weight_shape_wr_xyz.x = weight_arr_shape_X;
+  assign weight_shape_wr_xyz.y = weight_arr_shape_Y;
+  assign weight_shape_wr_xyz.z = weight_arr_shape_Z;
+  assign weight_read_arr_shape_X = weight_shape_rd_xyz.x;
+  assign weight_read_arr_shape_Y = weight_shape_rd_xyz.y;
+  assign weight_read_arr_shape_Z = weight_shape_rd_xyz.z;
+
+  shape_const_ram u_weight_shape (
       .clk   (clk_core),
       .rst_n (rst_n_core),
       .wr_en (weight_write_enable),
       .wr_addr(weight_shape_read_address),
-      .wr_val0(weight_arr_shape_X),
-      .wr_val1(weight_arr_shape_Y),
-      .wr_val2(weight_arr_shape_Z),
+      .wr_xyz(weight_shape_wr_xyz),
       .rd_addr(weight_shape_read_address),
-      .rd_val0(weight_read_arr_shape_X),
-      .rd_val1(weight_read_arr_shape_Y),
-      .rd_val2(weight_read_arr_shape_Z)
+      .rd_xyz(weight_shape_rd_xyz)
   );
 
   // ===| Shape totals (word counts for DMA) |====================================
