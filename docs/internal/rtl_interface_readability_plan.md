@@ -152,7 +152,7 @@ modules' worth of port discipline.
 
 ### 4.3 Shape triplet (`val0 / val1 / val2`)
 
-Both `fmap_array_shape` and `weight_array_shape` declare:
+The legacy concrete shape RAMs declared:
 
 ```systemverilog
 input  logic [16:0] wr_val0,  // shape: x
@@ -160,7 +160,7 @@ input  logic [16:0] wr_val1,  // shape: y
 input  logic [16:0] wr_val2,  // shape: z
 ```
 
-The two modules are byte-identical apart from the module name
+Those two modules were byte-identical apart from the module name
 (Keller-style shallow wrapper, see Stage C dead-module inventory
 §2.4 / KELLER §6.3.1). A `shape_xyz_t` typedef in `isa_pkg`
 collapses the triplet into one named struct and is the natural first
@@ -286,10 +286,8 @@ introduction time. Avoid landing the typedef alone.
 
 ### 6.4 Tier 4 — module consolidation
 
-Shape RAM consolidation (`fmap_array_shape` + `weight_array_shape`
-→ `shape_const_ram`) becomes a one-commit mechanical job once
-`shape_xyz_t` is in. Tracked separately as an architecture issue per
-the Stage C decisions memo.
+Shape RAM consolidation is complete in live RTL: the dispatcher now uses
+`shape_const_ram` through `shape_xyz_t`.
 
 ## 7. Package / parameter readability direction
 

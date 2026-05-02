@@ -80,8 +80,7 @@ synthesis top), and carry behavioural code. **No action needed.**
   `preprocess_fmap.sv`.
 
 **MEM_control**
-- `memory/Constant_Memory/fmap_array_shape.sv`,
-  `memory/Constant_Memory/weight_array_shape.sv`,
+- `memory/Constant_Memory/shape_const_ram.sv`,
   `memory/mem_BUFFER.sv`, `memory/mem_GLOBAL_cache.sv`,
   `IO/mem_u_operation_queue.sv`, `top/mem_HP_buffer.sv`,
   `top/mem_CVO_stream_bridge.sv`, `top/mem_L2_cache_fmap.sv`,
@@ -108,7 +107,7 @@ in-flight work. Do not delete.
 |---|---|---|
 | `Library/Typedef/bf16_int8_quant_pkg.sv` | W4A8 BF16 → INT8 BFP vocabulary; will be wired when `preprocess_bf16_int8_32_pipeline` lands. | User; gating hold (see W4A8 gates below). Do not stage in this batch. |
 | `PREPROCESS/preprocess_bf16_int8_32_pipeline.sv` | New W4A8 path under construction. | User; gating hold (see W4A8 gates below). Do not auto-stage. |
-| `MEM_control/memory/Constant_Memory/shape_const_ram.sv` | Parameterised replacement for the duplicate `fmap_array_shape` + `weight_array_shape` pair (Stage C decisions item 5; KELLER §6.3.1). Authored to fix the consolidation shape; not yet wired so existing `mem_dispatcher.sv` still instantiates the legacy modules. | **Separate focused PR** — a self-contained shape-RAM consolidation commit per the "Migration path" comment block in the new file's header. Do NOT bundle with this batch. |
+| `MEM_control/memory/Constant_Memory/shape_const_ram.sv` | Parameterised shape constant RAM. | Active live source; wired by `mem_dispatcher.sv`. |
 
 > **W4A8 gating hold.** The two W4A8 files above
 > (`bf16_int8_quant_pkg.sv`, `preprocess_bf16_int8_32_pipeline.sv`)
@@ -155,17 +154,15 @@ stat-collector lands, the new file can recreate its parent directory.
 
 ### 2.4 Deferred-decision candidates (NOT deleted in this batch)
 
-None at this scope. The shape-RAM consolidation
-(`fmap_array_shape` + `weight_array_shape` → one parameterised
-`shape_const_ram`) is tracked separately as an architecture issue per
-Stage C decisions memo item 5; both shape RAMs remain active here.
+None at this scope. Shape-RAM consolidation is complete in live RTL:
+`mem_dispatcher.sv` now uses the parameterised `shape_const_ram`.
 
 ## 3. Recommended follow-up (out of Stage C scope)
 
 These are noted for the next refactor pass, not actioned here:
 
-- **Shape RAM consolidation** (Stage C decision item 5) — produces a
-  single parameterised `shape_const_ram`. Architecture issue.
+- **Shape RAM consolidation** (Stage C decision item 5) — complete in
+  live RTL with the parameterised `shape_const_ram`.
 - **File / module name mismatches** flagged by verible
   (`GEMM_fmap_staggered_delay.sv` declares
   `GEMM_fmap_staggered_dispatch`, `mat_result_normalizer.sv` declares

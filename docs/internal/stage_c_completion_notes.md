@@ -184,9 +184,8 @@ throughout.
   together.
 - **GLOBAL_CONST Phases 2–5** — three HP_PORT_* migrations, five
   DSP48E2_* / PREG_SIZE migrations, cold-includer strip, file delete.
-- **Shape RAM consolidation** (`fmap_array_shape` +
-  `weight_array_shape` → parameterised `shape_const_ram`) — separate
-  architecture issue per Stage C decisions memo item 5.
+- **Shape RAM consolidation** — completed in live RTL with the
+  parameterised `shape_const_ram`.
 - **File / module name mismatches** flagged by verible
   (`GEMM_fmap_staggered_delay.sv` declares
   `GEMM_fmap_staggered_dispatch`, `mat_result_normalizer.sv` declares
