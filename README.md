@@ -1,7 +1,7 @@
 # pccx — Bare-Metal Transformer Accelerator on Kria KV260
 
-Open SystemVerilog NPU for Gemma-class LLM inference on AMD/Xilinx
-Kria KV260.
+Open SystemVerilog NPU for experimental Gemma-class LLM acceleration on
+AMD/Xilinx Kria KV260.
 
 ```text
 PCCX KV260 Roadmap
@@ -171,7 +171,7 @@ Details: [DSP48E2 W4A8 bit-packing →](https://pccxai.github.io/pccx/en/docs/v0
 
 ---
 
-## How Gemma 3N E4B Runs on This Thing
+## Target Gemma 3N E4B Execution Path
 
 The target model (Google Gemma 3N E4B) has several deviations from a
 textbook decoder that the scheduler has to honor. The short list:
@@ -256,10 +256,10 @@ Details: [KV cache strategy →](https://pccxai.github.io/pccx/en/docs/v002/Arch
 This repository hosts the RTL for **both** active tracks. As of
 2026-04-20:
 
-| Track | Target model | Goal | Horizon | Shared RTL assets |
+| Track | Target model | Planned target | Horizon | Shared RTL assets |
 |-------|-------------|------|---------|-------------------|
-| **v002 Extended** (this repo, `main`) | Gemma 3N E4B | **20 tok/s** measured | Week 1–49 | sparse weight fetcher (Phase G), EAGLE draft/verify dispatch (Phase H+), SSD scheduler (Phase I), tree mask generator (Phase J) |
-| **v003** (future branch) | Gemma 4 E4B | **12–15 tok/s** | Week 16–52 (parallel) | reuses v002 Phase G/H/I/J modules with hidden/layer/KV-head re-parameterization |
+| **v002 Extended** (this repo, `main`) | Gemma 3N E4B | **20 tok/s** target, evidence-gated | Week 1–49 | sparse weight fetcher (Phase G), EAGLE draft/verify dispatch (Phase H+), SSD scheduler (Phase I), tree mask generator (Phase J) |
+| **v003** (future branch) | Gemma 4 E4B | **12–15 tok/s** target | Week 16–52 (parallel) | reuses v002 Phase G/H/I/J modules with hidden/layer/KV-head re-parameterization |
 
 - v002 freeze → snapshotted into `pccx/codes/v002/` via the pccx
   version-cutover workflow (`tools/freeze_active.sh`).
