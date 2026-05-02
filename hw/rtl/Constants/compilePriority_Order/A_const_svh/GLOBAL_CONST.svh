@@ -12,10 +12,11 @@
 `include "npu_arch.svh"
 
 // ===| Legacy aliases (kept for backward compatibility) |=======================
-
-// Boolean
-`define TRUE  1'b1
-`define FALSE 1'b0
+//
+// Migration progress (see docs/internal/global_const_migration_plan.md):
+//   - TRUE / FALSE: removed (no consumers; use 1'b1 / 1'b0 directly).
+//   - HP_PORT_*: 3 consumers remain (Phase 2).
+//   - DSP48E2_* / PREG_SIZE: 5 consumers remain (Phase 3).
 
 // HP weight bus width aliases (used in port declarations of MAT_CORE)
 `define HP_PORT_MAX_WIDTH    `HP_TOTAL_WIDTH
