@@ -10,6 +10,8 @@ Pages, bilingual EN / KO).
   <https://pccxai.github.io/pccx/en/docs/v002/index.html>
 - Repo-local xsim evidence workflow:
   [SIMULATION.md](SIMULATION.md)
+- Repo-local Vivado timing evidence checklist:
+  [TIMING_EVIDENCE.md](TIMING_EVIDENCE.md)
 - Repo-local release evidence checklist:
   [RELEASE_EVIDENCE_CHECKLIST.md](RELEASE_EVIDENCE_CHECKLIST.md)
 - Documentation root (language picker):
