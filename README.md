@@ -1,5 +1,16 @@
 # pccx — Bare-Metal Transformer Accelerator on Kria KV260
 
+Open SystemVerilog NPU for Gemma-class LLM inference on AMD/Xilinx
+Kria KV260.
+
+<p align="center">
+  <img src="docs/assets/pccx-kv260-roadmap.svg" alt="PCCX KV260 Roadmap status card" width="920">
+</p>
+
+<p align="center">
+  <strong>Current status:</strong> RTL alpha. Verification and bring-up are active; timing-closed bitstream and full runtime integration are in progress.
+</p>
+
 ![Architecture](https://img.shields.io/badge/Architecture-pccx_v002-purple)
 ![RTL](https://img.shields.io/badge/RTL-SystemVerilog-green)
 ![Target](https://img.shields.io/badge/Target-Kria_KV260-orange)
@@ -7,11 +18,11 @@
 ![Clock](https://img.shields.io/badge/Core-400_MHz-blue)
 ![Goal](https://img.shields.io/badge/Gemma_3N_E4B-20_tok%2Fs-yellow)
 
-This repo is the **bare-metal Kria KV260 implementation** (RTL + driver +
-application) of the **pccx v002** NPU architecture. It hosts an early
-SystemVerilog RTL and bare-metal driver source snapshot intended to
-close the loop between the pccx architecture specification, source-level
-RTL inspection, early verification setup, and planned KV260 bring-up.
+This repo is the **bare-metal Kria KV260 implementation** of the
+**pccx v002** NPU architecture. It hosts an early SystemVerilog RTL and
+bare-metal driver source snapshot intended to close the loop between the
+pccx architecture specification, source-level RTL inspection, early
+verification setup, and planned KV260 bring-up.
 
 This is not a timing-closed production bitstream release — Vivado
 synthesis, trace-driven verification, and full Gemma 3N E4B application
@@ -376,4 +387,3 @@ for the end-to-end flow diagram and the Tauri IPC surface.
 
 Apache 2.0 — same as pccx. This protects the architecture from patent
 risk while keeping the ecosystem open for hardware research.
-
