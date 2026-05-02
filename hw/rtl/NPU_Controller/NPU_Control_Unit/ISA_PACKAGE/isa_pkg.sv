@@ -47,10 +47,8 @@ package isa_pkg;
   typedef logic [15:0] length_t;
 
   // ===| Shape Types (shape constant RAM contract) |=============================
-  // Both fmap_array_shape and weight_array_shape today expose three flat
-  // 17-bit ports per access (wr_val0/1/2 and rd_val0/1/2) for the X / Y / Z
-  // axes of the constant shape RAM. Naming the dimension and the triplet
-  // makes future code clearer:
+  // The shape constant RAM stores three 17-bit axes per entry. Naming the
+  // dimension and the triplet keeps dispatcher and testbench code explicit:
   //
   //   shape_dim_t : single-axis size (17-bit, matches the address-space
   //                 dimension used by dest_addr_t / src_addr_t).

@@ -2,21 +2,18 @@
 
 // ===| Module: shape_const_ram — parameterised shape constant RAM |=============
 // Purpose      : Single source for the (X, Y, Z) tensor-shape constant RAM
-//                used by fmap and weight MEMSET descriptors. Replaces the
-//                byte-for-byte duplicate pair `fmap_array_shape` +
-//                `weight_array_shape` (Stage E analysis §6.3.1, Stage C
-//                decisions memo item 5).
+//                used by fmap and weight MEMSET descriptors. Supersedes
+//                the former byte-for-byte duplicate concrete RAM pair
+//                (Stage E analysis §6.3.1, Stage C decisions memo item 5).
 //
 //                Wired into `mem_dispatcher.sv` as the replacement for the
-//                legacy concrete shape RAM pair. The old modules can be
-//                removed after migration validation and review.
+//                legacy concrete shape RAM pair.
 //
 // Spec ref     : pccx v002 §3.3 (MEMSET), §5.4 (shape pointer routing).
 // Clock        : clk @ 400 MHz.
 // Reset        : rst_n active-low (synchronous clear of all entries).
 // Geometry     : Depth × shape_xyz_t. With Depth = 64 the 51-bit storage
-//                exactly matches the existing fmap_array_shape /
-//                weight_array_shape footprint.
+//                exactly matches the legacy 3 × 17-bit footprint.
 // Latency      : Write — 1 cycle. Read — 0 cycles (combinational).
 // Throughput   : 1 write + 1 read per cycle.
 // Reset state  : All entries cleared to 0.
@@ -25,10 +22,8 @@
 //                identical to the existing modules' 3 × 17-bit fan-out so
 //                a parent migration is a one-line swap and a port name
 //                change.
-// Follow-up:
-//   Delete fmap_array_shape.sv / weight_array_shape.sv and remove their
-//   filelist entries once the dispatcher migration is reviewed with xsim
-//   evidence.
+// Migration    : dispatcher migration and xsim coverage are active; the
+//                legacy concrete RAM modules are removed from live sources.
 // ===============================================================================
 
 module shape_const_ram
