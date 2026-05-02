@@ -33,12 +33,12 @@
 // ===============================================================================
 
 module GEMM_systolic_top #(
-    parameter weight_lane_cnt      = `HP_PORT_CNT,
-    parameter weight_width_per_lane = `HP_PORT_SINGLE_WIDTH,
+    parameter weight_lane_cnt      = `DEVICE_HP_PORT_CNT,
+    parameter weight_width_per_lane = `HP_SINGLE_WIDTH,
     parameter weight_size          = `INT4_WIDTH,
 
     // 32 = 128 bit / int4 (4-bit)
-    parameter weight_cnt           = `HP_PORT_SINGLE_WIDTH / `INT4_WIDTH,
+    parameter weight_cnt           = `HP_SINGLE_WIDTH / `INT4_WIDTH,
 
     parameter array_horizontal     = `ARRAY_SIZE_H,
     parameter array_vertical       = `ARRAY_SIZE_V,
@@ -69,10 +69,10 @@ module GEMM_systolic_top #(
     //   HP0 -> upper INT4 channel, HP1 -> lower INT4 channel. Both lanes must
     //   present valid data in the same cycle for the W4A8 dual-MAC pipeline.
     //   Arrays are already unpacked to 32 × INT4 upstream (128 bit / 4 bit = 32).
-    input  logic [`INT4_WIDTH-1:0] IN_weight_upper      [0:(`HP_PORT_SINGLE_WIDTH/`INT4_WIDTH)-1],
+    input  logic [`INT4_WIDTH-1:0] IN_weight_upper      [0:(`HP_SINGLE_WIDTH/`INT4_WIDTH)-1],
     input  logic                   IN_weight_upper_valid,
     output logic                   IN_weight_upper_ready,
-    input  logic [`INT4_WIDTH-1:0] IN_weight_lower      [0:(`HP_PORT_SINGLE_WIDTH/`INT4_WIDTH)-1],
+    input  logic [`INT4_WIDTH-1:0] IN_weight_lower      [0:(`HP_SINGLE_WIDTH/`INT4_WIDTH)-1],
     input  logic                   IN_weight_lower_valid,
     output logic                   IN_weight_lower_ready,
 

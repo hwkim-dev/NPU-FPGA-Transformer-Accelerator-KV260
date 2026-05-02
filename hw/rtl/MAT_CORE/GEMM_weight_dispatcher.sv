@@ -27,7 +27,7 @@
 
 module GEMM_weight_dispatcher #(
   parameter int weight_size = `INT4_WIDTH,                         // 4
-  parameter int weight_cnt  = `HP_PORT_SINGLE_WIDTH / `INT4_WIDTH  // 32 = 128/4
+  parameter int weight_cnt  = `HP_SINGLE_WIDTH / `INT4_WIDTH  // 32 = 128/4
 ) (
   input  logic clk,
   input  logic rst_n,

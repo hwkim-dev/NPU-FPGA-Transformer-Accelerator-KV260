@@ -213,7 +213,7 @@ module NPU_top (
   // ===| v002 dual-lane weight unpack |=========================================
   // HP0 / HP1 each carry a 128-bit AXIS word that holds 32 INT4 weights.
   // Slice each into a 32-element INT4 array for the systolic engine.
-  localparam int WEIGHT_CNT = `HP_PORT_SINGLE_WIDTH / `INT4_WIDTH;  // 32
+  localparam int WEIGHT_CNT = `HP_SINGLE_WIDTH / `INT4_WIDTH;  // 32
   logic [`INT4_WIDTH-1:0] hp0_weight_int4 [0:WEIGHT_CNT-1];
   logic [`INT4_WIDTH-1:0] hp1_weight_int4 [0:WEIGHT_CNT-1];
   genvar wi;

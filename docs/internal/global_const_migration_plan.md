@@ -98,26 +98,33 @@ Each phase below is meant to be **its own commit**, with `xvlog`
 clean and (where applicable) `bash hw/sim/run_verification.sh`
 re-passing before the next phase starts.
 
-### Phase 1 — drop `TRUE` / `FALSE` aliases (this Stage C batch)
+### Phase 1 — drop `TRUE` / `FALSE` aliases (Stage C batch — DONE)
 
-Zero consumers. Remove the four lines from `GLOBAL_CONST.svh`. Lint
-must remain clean. **Actioned in the next commit alongside this
-document.**
+Zero consumers. Removed the four lines from `GLOBAL_CONST.svh`. Lint
+remained clean. **Actioned in the Stage C batch.**
 
-### Phase 2 — migrate `\`HP_PORT_*` consumers (next batch)
+### Phase 2 — migrate `\`HP_PORT_*` consumers (DONE — this batch)
 
-Replace the three files in §1.2 sequentially:
+Replaced the three files in §1.2 plus the one TB consumer:
 
-  - `hw/rtl/MAT_CORE/GEMM_systolic_top.sv`
-  - `hw/rtl/MAT_CORE/GEMM_weight_dispatcher.sv`
-  - `hw/rtl/NPU_top.sv`
+  - `hw/rtl/MAT_CORE/GEMM_systolic_top.sv` — 4 substitutions.
+  - `hw/rtl/MAT_CORE/GEMM_weight_dispatcher.sv` — 1 substitution.
+  - `hw/rtl/NPU_top.sv` — 1 substitution.
+  - `hw/tb/tb_GEMM_weight_dispatcher.sv` — 1 substitution (TB-side).
 
-Mechanical text substitution per the table in §1.2. Re-run
-`xvlog` and the existing TBs after each file (`tb_GEMM_weight_dispatcher`
-covers one of the three directly; the others rely on lint).
+Mechanical text substitution per the table in §1.2. After the four
+files migrated, the three `\`define HP_PORT_*` lines were removed
+from `GLOBAL_CONST.svh`. `bash hw/sim/run_verification.sh` reports
+7/7 PASS (the new `tb_mem_u_operation_queue` is included).
 
-Once all three migrate, delete the three `\`define HP_PORT_*` lines
-from `GLOBAL_CONST.svh`.
+Validation evidence (this batch):
+  - `xvlog -f filelist.f` — 0 ERROR / 0 WARNING.
+  - `bash hw/sim/run_verification.sh` — 7/7 PASS, including
+    `tb_GEMM_weight_dispatcher` which directly compiles the migrated
+    `GEMM_weight_dispatcher` module.
+  - `grep -rn "HP_PORT_(SINGLE_WIDTH|MAX_WIDTH|CNT)\b" hw/rtl/` — only
+    legitimate hits remain (`DEVICE_HP_PORT_CNT` is the new symbol;
+    `WEIGHT_HP_PORT_SIZE` is unrelated to the legacy alias group).
 
 ### Phase 3 — migrate `\`DSP48E2_*` / `\`PREG_SIZE` consumers (next batch)
 
