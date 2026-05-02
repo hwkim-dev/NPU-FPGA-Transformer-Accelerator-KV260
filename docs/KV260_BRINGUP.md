@@ -12,6 +12,13 @@ The repo includes:
 scripts/kv260/run_gemma3n_e4b_smoke.sh
 ```
 
+Use `--dry-run` to validate the handoff shape and write blocked evidence
+without contacting the board:
+
+```bash
+scripts/kv260/run_gemma3n_e4b_smoke.sh --dry-run
+```
+
 The script is explicit by default: without the required environment it
 exits with a `BLOCKED_*` status and writes a blocker summary under
 `docs/evidence/kv260-gemma3n-e4b/<run_id>/`.
@@ -39,6 +46,14 @@ Optional controls:
 | `PCCX_SKIP_BITSTREAM_LOAD=1` | Skip programming when the intended image is already loaded |
 | `PCCX_REMOTE_RUN_CMD` | Override the board-side NPU runtime command |
 | `PCCX_RUN_ID` | Force a stable evidence directory name |
+
+Recognized aliases for runtime handoff manifests:
+
+| Alias | Maps to |
+| --- | --- |
+| `PCCX_KV260_BOARD_ADDR` | `PCCX_KV260_HOST` |
+| `PCCX_GEMMA3N_E4B_MODEL_DIR` | `PCCX_MODEL_DIR` |
+| `PCCX_KV260_BITSTREAM` | `PCCX_BITSTREAM_PATH` |
 
 ## Evidence Flow
 

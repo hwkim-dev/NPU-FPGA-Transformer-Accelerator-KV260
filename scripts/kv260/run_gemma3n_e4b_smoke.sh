@@ -5,6 +5,42 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 EVIDENCE_ROOT="${REPO_ROOT}/docs/evidence/kv260-gemma3n-e4b"
+DRY_RUN=0
+ORIGINAL_ARGS=("$@")
+
+usage() {
+  cat <<'USAGE'
+usage: scripts/kv260/run_gemma3n_e4b_smoke.sh [--dry-run]
+
+Options:
+  --dry-run   validate host-side handoff inputs and write evidence without contacting the board
+  -h, --help  print this help
+USAGE
+}
+
+while (($#)); do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "error: unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+PCCX_KV260_HOST="${PCCX_KV260_HOST:-${PCCX_KV260_BOARD_ADDR:-}}"
+PCCX_MODEL_DIR="${PCCX_MODEL_DIR:-${PCCX_GEMMA3N_E4B_MODEL_DIR:-}}"
+PCCX_BITSTREAM_PATH="${PCCX_BITSTREAM_PATH:-${PCCX_KV260_BITSTREAM:-}}"
+PCCX_BOARD_RUNTIME_DIR="${PCCX_BOARD_RUNTIME_DIR:-${PCCX_RUNTIME_DIR:-}}"
+export PCCX_KV260_HOST PCCX_MODEL_DIR PCCX_BITSTREAM_PATH PCCX_BOARD_RUNTIME_DIR
 
 GIT_COMMIT="$(git -C "${REPO_ROOT}" rev-parse HEAD 2>/dev/null || printf 'unknown')"
 GIT_SHORT="$(git -C "${REPO_ROOT}" rev-parse --short=12 HEAD 2>/dev/null || printf 'nogit')"
@@ -95,6 +131,10 @@ write_summary() {
     printf 'run_id=%s\n' "${RUN_ID}"
     printf 'branch=%s\n' "${GIT_BRANCH}"
     printf 'git_commit=%s\n' "${GIT_COMMIT}"
+    printf 'dry_run=%s\n' "${DRY_RUN}"
+    printf 'board_interface=%s\n' "${PCCX_KV260_BOARD_IFACE:-unknown}"
+    printf 'model_manifest=%s\n' "${PCCX_GEMMA3N_E4B_MANIFEST:-unknown}"
+    printf 'command_line=%s %s\n' "$0" "${ORIGINAL_ARGS[*]:-}"
     printf 'result_status=%s\n' "${RESULT_STATUS}"
     printf 'runtime_path=%s\n' "${RUNTIME_PATH}"
     printf 'board_reachable=%s\n' "${BOARD_REACHABLE}"
@@ -145,6 +185,25 @@ block_with() {
   } >"${BLOCKER_FILE}"
   printf '%s: %s\n' "${status}" "${reason}" >&2
   finish 2
+}
+
+dry_run_blocked() {
+  local reason="$1"
+  shift
+  RESULT_STATUS="BLOCKED_DRY_RUN_INPUTS"
+  RUNTIME_PATH="dry_run"
+  BLOCKER_REASON="${reason}"
+  {
+    printf 'status=%s\n' "${RESULT_STATUS}"
+    printf 'reason=%s\n' "${reason}"
+    printf 'instructions:\n'
+    local line
+    for line in "$@"; do
+      printf -- '- %s\n' "${line}"
+    done
+  } >"${BLOCKER_FILE}"
+  printf 'dry_run_blocked=%s\n' "${reason}"
+  finish 0
 }
 
 run_ssh_logged() {
@@ -537,6 +596,15 @@ done
 
 if [[ "${#missing[@]}" -gt 0 ]]; then
   missing_csv="$(IFS=,; printf '%s' "${missing[*]}")"
+  if (( DRY_RUN )); then
+    dry_run_blocked \
+      "Missing required dry-run handoff inputs: ${missing_csv}" \
+      "Set PCCX_KV260_HOST or PCCX_KV260_BOARD_ADDR for the board address." \
+      "Set PCCX_KV260_USER for the board SSH user." \
+      "Set PCCX_MODEL_DIR or PCCX_GEMMA3N_E4B_MODEL_DIR for the external model directory." \
+      "Set PCCX_BITSTREAM_PATH or PCCX_KV260_BITSTREAM for the intended bitstream." \
+      "Set PCCX_RUN_PROMPT, PCCX_RUN_TOKENS, and PCCX_BOARD_RUNTIME_DIR."
+  fi
   for name in "${missing[@]}"; do
     case "${name}" in
       PCCX_KV260_HOST|PCCX_KV260_USER)
@@ -583,10 +651,29 @@ printf '%s\n' "${PCCX_RUN_PROMPT}" >"${EVIDENCE_DIR}/input.txt"
 printf '%s\n' "${PCCX_RUN_TOKENS}" >"${EVIDENCE_DIR}/requested_tokens.txt"
 
 if ! [[ "${PCCX_RUN_TOKENS}" =~ ^[1-9][0-9]*$ ]]; then
+  if (( DRY_RUN )); then
+    dry_run_blocked \
+      "PCCX_RUN_TOKENS must be a positive integer" \
+      "Set PCCX_RUN_TOKENS to a small positive integer for smoke testing, for example 8."
+  fi
   block_with \
     "BLOCKED_RUNTIME" \
     "PCCX_RUN_TOKENS must be a positive integer" \
     "Set PCCX_RUN_TOKENS to a small positive integer for smoke testing, for example 8."
+fi
+
+if (( DRY_RUN )); then
+  RESULT_STATUS="PASS_DRY_RUN_READY"
+  RUNTIME_PATH="dry_run"
+  BLOCKER_REASON="Dry-run did not contact the KV260 and did not execute hardware."
+  {
+    printf 'status=%s\n' "${RESULT_STATUS}"
+    printf 'reason=%s\n' "${BLOCKER_REASON}"
+    printf 'instructions:\n'
+    printf -- '- Re-run without --dry-run only after board, model, bitstream, and runtime paths are intentional.\n'
+    printf -- '- Use an available board interface such as USB serial/JTAG or Ethernet, depending on the target board.\n'
+  } >"${BLOCKER_FILE}"
+  finish 0
 fi
 
 SSH_TARGET="${PCCX_KV260_USER}@${PCCX_KV260_HOST}"

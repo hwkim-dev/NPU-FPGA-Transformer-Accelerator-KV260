@@ -34,6 +34,25 @@ On memory-constrained hosts, reduce Vivado run parallelism:
 PCCX_VIVADO_JOBS=1 ./vivado/build.sh synth
 ```
 
+For bounded status capture without launching Vivado:
+
+```bash
+bash scripts/v002/run-timing-evidence.sh --dry-run
+```
+
+The helper writes `hw/build/v002-timing-evidence/<run_id>/summary.txt`
+with one of:
+
+```text
+TIMING_NOT_RUN
+TIMING_ATTEMPTED_NO_REPORT
+TIMING_REPORT_PRESENT_NOT_CLOSED
+TIMING_REPORT_PRESENT_CLOSED
+```
+
+Only `TIMING_REPORT_PRESENT_CLOSED` means a real report says the checked
+constraints are met.
+
 ## Expected Report Locations
 
 Generated files land under `hw/build/` and are ignored by git unless a

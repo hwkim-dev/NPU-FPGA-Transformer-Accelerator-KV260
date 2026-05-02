@@ -339,6 +339,13 @@ emits a `.pccx` trace per bench for [pccx-lab][pccx-lab] to visualise:
 hw/sim/run_verification.sh
 ```
 
+For a shorter local smoke subset:
+
+```bash
+hw/sim/run_verification.sh --quick
+scripts/v002/run-local-candidate.sh --quick
+```
+
 See [docs/SIMULATION.md](docs/SIMULATION.md) for generated log paths,
 PASS verdict rules, and the evidence checklist.
 
@@ -356,6 +363,7 @@ PASS verdict rules, and the evidence checklist.
 | `tb_barrel_shifter_BF16`           | `barrel_shifter_BF16` (BF16 → 27 b fixed-point)         |  512 |
 | `tb_ctrl_npu_decoder`              | `ctrl_npu_decoder` (4-bit opcode → one-hot valid)       |    6 |
 | `tb_mem_u_operation_queue`         | `mem_u_operation_queue` (queue push / pop smoke)         |   32 |
+| `tb_v002_runtime_smoke_program`    | generated v002 ISA `.memh` → decoder/scheduler handoff   |    7 |
 
 Every bench emits the canonical `PASS:` line that
 [pccx-lab][pccx-lab]'s `from_xsim_log` converter recognises — the

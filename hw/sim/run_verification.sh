@@ -23,14 +23,6 @@ PCCX_CLI_BIN="$PCCX_LAB_DIR/target/release/from_xsim_log"
 VIVADO_ROOT="${XILINX_VIVADO:-}"
 GLBL_V="${VIVADO_ROOT:+$VIVADO_ROOT/ids_lite/ISE/verilog/src/glbl.v}"
 
-mkdir -p "$WORK_ROOT"
-
-# Build the pccx-lab bridge binary if stale / missing.
-if [[ ! -x "$PCCX_CLI_BIN" ]]; then
-    echo "==> Building from_xsim_log (one-time setup)"
-    (cd "$PCCX_LAB_DIR" && cargo build --release --bin from_xsim_log)
-fi
-
 # ─── Per-testbench RTL dependency map ───────────────────────────────────────
 # Each entry lists the .sv modules xvlog must pick up, relative to hw/rtl/.
 declare -A TB_DEPS=(
@@ -44,6 +36,7 @@ declare -A TB_DEPS=(
     [tb_ctrl_npu_decoder]="NPU_Controller/NPU_Control_Unit/ISA_PACKAGE/isa_pkg.sv NPU_Controller/NPU_Control_Unit/ctrl_npu_decoder.sv"
     [tb_mem_u_operation_queue]="Constants/compilePriority_Order/E_obs_pkg/perf_counter_pkg.sv NPU_Controller/NPU_Control_Unit/ISA_PACKAGE/isa_pkg.sv MEM_control/IO/mem_u_operation_queue.sv"
     [tb_GEMM_fmap_staggered_delay]="MAT_CORE/GEMM_fmap_staggered_delay.sv"
+    [tb_v002_runtime_smoke_program]="NPU_Controller/NPU_Control_Unit/ISA_PACKAGE/isa_pkg.sv NPU_Controller/NPU_Control_Unit/ctrl_npu_decoder.sv NPU_Controller/Global_Scheduler.sv"
 )
 
 # Core-id assigned to a tb's emitted pccx trace. Kept contiguous so the UI
@@ -59,6 +52,7 @@ declare -A TB_CORE=(
     [tb_ctrl_npu_decoder]=7
     [tb_mem_u_operation_queue]=8
     [tb_GEMM_fmap_staggered_delay]=9
+    [tb_v002_runtime_smoke_program]=10
 )
 
 TB_LIST=(
@@ -72,14 +66,23 @@ TB_LIST=(
     tb_ctrl_npu_decoder
     tb_mem_u_operation_queue
     tb_GEMM_fmap_staggered_delay
+    tb_v002_runtime_smoke_program
+)
+
+QUICK_TB_LIST=(
+    tb_shape_const_ram
+    tb_mem_dispatcher_shape_lookup
+    tb_v002_runtime_smoke_program
 )
 
 usage() {
     cat <<'USAGE'
-usage: hw/sim/run_verification.sh [--list] [--tb <testbench>]
+usage: hw/sim/run_verification.sh [--list] [--quick] [--full] [--tb <testbench>]
 
 Options:
   --list          print known testbenches and exit
+  --quick         run the stable local smoke subset
+  --full          run all known testbenches (default)
   --tb <name>     run one known testbench
   -h, --help      print this help
 USAGE
@@ -91,6 +94,14 @@ while (($#)); do
         --list)
             printf '%s\n' "${TB_LIST[@]}"
             exit 0
+            ;;
+        --quick)
+            SELECTED_TBS=("${QUICK_TB_LIST[@]}")
+            shift
+            ;;
+        --full)
+            SELECTED_TBS=("${TB_LIST[@]}")
+            shift
             ;;
         --tb)
             if (($# < 2)); then
@@ -118,6 +129,14 @@ while (($#)); do
     esac
 done
 
+mkdir -p "$WORK_ROOT"
+
+# Build the pccx-lab bridge binary if stale / missing.
+if [[ ! -x "$PCCX_CLI_BIN" ]]; then
+    echo "==> Building from_xsim_log (one-time setup)"
+    (cd "$PCCX_LAB_DIR" && cargo build --release --bin from_xsim_log)
+fi
+
 run_tb() {
     local tb="$1"
     local work="$WORK_ROOT/$tb"
@@ -138,6 +157,15 @@ run_tb() {
     (
         set -euo pipefail
         cd "$work"
+        if [[ "$tb" == "tb_v002_runtime_smoke_program" ]]; then
+            echo "  [program]"
+            python3 "$HW_DIR/../tools/v002/generate_smoke_program.py" \
+                --preset tiny-shape-lookup \
+                --out "$work/program.json" \
+                --memh "$work/v002_runtime_smoke.memh" \
+                >program_generate.log 2>&1
+        fi
+
         echo "  [xvlog]"
         xvlog -sv \
             -i "$HW_DIR/rtl/Constants/compilePriority_Order/A_const_svh" \
