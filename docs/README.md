@@ -8,6 +8,8 @@ Pages, bilingual EN / KO).
 
 - **Latest architecture — v002** (current target of this repo):
   <https://pccxai.github.io/pccx/en/docs/v002/index.html>
+- Repo-local KV260 bring-up checklist:
+  [KV260_BRINGUP.md](KV260_BRINGUP.md)
 - Repo-local xsim evidence workflow:
   [SIMULATION.md](SIMULATION.md)
 - Repo-local Vivado timing evidence checklist:
