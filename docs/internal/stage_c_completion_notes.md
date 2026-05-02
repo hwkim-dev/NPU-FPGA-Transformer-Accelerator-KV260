@@ -162,8 +162,8 @@ Run after every meaningful change. 0 ERROR / 0 WARNING throughout.
 | tb_barrel_shifter_BF16              | PASS — 512 cycles   |
 | tb_ctrl_npu_decoder                 | PASS — 6 cycles     |
 
-Re-run at the end of the batch must show the same 6 PASS — see
-`/tmp/sim_post_stage_c.log` snapshot referenced in the final report.
+Re-running `bash hw/sim/run_verification.sh` at branch tip shows the
+same 6 PASS — no regression introduced by any of the 15 commits.
 
 ### 4.3 git diff --check
 
