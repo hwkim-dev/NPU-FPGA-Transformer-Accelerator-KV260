@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "kind": "pccx_v002_gemma3n_e4b_external_manifest",
+  "not_hardware_execution": true,
+  "model": {
+    "name": "Gemma 3N E4B",
+    "external_model_dir": "/mnt/pccx/models/gemma3n_e4b",
+    "required_files": [
+      "config.json"
+    ],
+    "optional_files": [
+      "tokenizer.json",
+      "*.safetensors",
+      "*.gguf",
+      "layer_*_packed.npy",
+      "layer_*_scale.npy"
+    ],
+    "weights_committed_to_repo": false
+  },
+  "runtime": {
+    "target_board": "KV260",
+    "board_addr_env": "PCCX_KV260_BOARD_ADDR",
+    "board_iface_env": "PCCX_KV260_BOARD_IFACE",
+    "bitstream": "/mnt/pccx/bitstreams/pccx_v002_kv260.bit",
+    "runtime_bin": "/opt/pccx/runtime/gemma3n_e4b_npu",
+    "smoke_runner": "scripts/kv260/run_gemma3n_e4b_smoke.sh"
+  },
+  "evidence": {
+    "root": "docs/evidence/kv260-gemma3n-e4b",
+    "blocked_board_status": "BLOCKED_BOARD",
+    "target_tokens_per_second": 20,
+    "measured_tokens_per_second": null
+  }
+}

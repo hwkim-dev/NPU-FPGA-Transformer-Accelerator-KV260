@@ -18,6 +18,13 @@ From the repository root:
 bash hw/sim/run_verification.sh
 ```
 
+Quick smoke and per-testbench modes:
+
+```bash
+bash hw/sim/run_verification.sh --quick
+bash hw/sim/run_verification.sh --tb tb_v002_runtime_smoke_program
+```
+
 The runner executes testbenches in deterministic order. A testbench passes
 only when its `xsim.log` contains a `PASS:` verdict. A missing verdict or
 an explicit `FAIL:` verdict makes the runner exit nonzero.
@@ -35,6 +42,13 @@ an explicit `FAIL:` verdict makes the runner exit nonzero.
 | `tb_ctrl_npu_decoder` | ISA opcode decode to one-hot control |
 | `tb_mem_u_operation_queue` | Memory operation queue smoke |
 | `tb_GEMM_fmap_staggered_delay` | GEMM fmap/data-valid/instruction stagger alignment |
+| `tb_v002_runtime_smoke_program` | Generated v002 runtime `.memh` program through decoder and Global Scheduler |
+
+`tb_v002_runtime_smoke_program` is driven by
+`tools/v002/generate_smoke_program.py`. The runner generates
+`program.json` and `v002_runtime_smoke.memh` inside the testbench work
+directory before xsim starts. This is a runtime handoff smoke only; it is
+not model inference, board execution, or throughput evidence.
 
 ## Generated Evidence
 
